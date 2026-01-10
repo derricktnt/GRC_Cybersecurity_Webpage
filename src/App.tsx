@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Shield, LogOut, Activity } from 'lucide-react';
+import { Shield, LogOut, Activity, BarChart3, LayoutDashboard } from 'lucide-react';
 import { supabase, SUPABASE_AVAILABLE } from './lib/supabase';
 import { AuthForm } from './components/AuthForm';
 import { ApiKeyManager } from './components/ApiKeyManager';
 import { IpAddressMonitor } from './components/IpAddressMonitor';
+import { Reports } from './components/Reports';
+
+type View = 'dashboard' | 'reports';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [fatalError, setFatalError] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<View>('dashboard');
 
   useEffect(() => {
     if (!SUPABASE_AVAILABLE) {
@@ -130,43 +134,71 @@ function App() {
               </button>
             </div>
           </div>
+          <div className="flex gap-1 border-t border-gray-200 -mb-px">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                currentView === 'dashboard'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </button>
+            <button
+              onClick={() => setCurrentView('reports')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                currentView === 'reports'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Reports
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium opacity-90">Security Score</h3>
-                <Shield className="w-5 h-5 opacity-80" />
+        {currentView === 'dashboard' ? (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium opacity-90">Security Score</h3>
+                  <Shield className="w-5 h-5 opacity-80" />
+                </div>
+                <p className="text-3xl font-bold">92/100</p>
+                <p className="text-xs opacity-80 mt-1">Excellent protection level</p>
               </div>
-              <p className="text-3xl font-bold">92/100</p>
-              <p className="text-xs opacity-80 mt-1">Excellent protection level</p>
+
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium opacity-90">Active Monitors</h3>
+                  <Activity className="w-5 h-5 opacity-80" />
+                </div>
+                <p className="text-3xl font-bold">24/7</p>
+                <p className="text-xs opacity-80 mt-1">Continuous surveillance</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium opacity-90">Compliance Status</h3>
+                  <Shield className="w-5 h-5 opacity-80" />
+                </div>
+                <p className="text-3xl font-bold">98%</p>
+                <p className="text-xs opacity-80 mt-1">SOC2, ISO 27001 certified</p>
+              </div>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium opacity-90">Active Monitors</h3>
-                <Activity className="w-5 h-5 opacity-80" />
-              </div>
-              <p className="text-3xl font-bold">24/7</p>
-              <p className="text-xs opacity-80 mt-1">Continuous surveillance</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium opacity-90">Compliance Status</h3>
-                <Shield className="w-5 h-5 opacity-80" />
-              </div>
-              <p className="text-3xl font-bold">98%</p>
-              <p className="text-xs opacity-80 mt-1">SOC2, ISO 27001 certified</p>
-            </div>
+            <ApiKeyManager />
+            <IpAddressMonitor />
           </div>
-
-          <ApiKeyManager />
-          <IpAddressMonitor />
-        </div>
+        ) : (
+          <Reports />
+        )}
       </main>
     </div>
   );
