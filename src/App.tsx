@@ -16,51 +16,81 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
 
   useEffect(() => {
-    if (!SUPABASE_AVAILABLE) {
-      setFatalError(
-        'Missing Supabase environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Add them to your .env or deployment environment and redeploy.'
-      );
-      setLoading(false);
-      return;
-    }
+    const init = async () => {
+      try {
+        if (!SUPABASE_AVAILABLE) {
+          setFatalError(
+            'Missing Supabase environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Add them to your .env or deployment environment and redeploy.'
+          );
+          setLoading(false);
+          return;
+        }
 
-    checkAuth();
+        await checkAuth();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        setFatalError(`Initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setLoading(false);
+      }
+    };
+
+    init();
 
     let subscription: any | null = null;
 
     if (supabase) {
-      const { data } = supabase.auth.onAuthStateChange((event) => {
-        (async () => {
-          if (event === 'SIGNED_IN') {
-            setIsAuthenticated(true);
-            await fetchUserEmail();
-          } else if (event === 'SIGNED_OUT') {
-            setIsAuthenticated(false);
-            setUserEmail('');
-          }
-        })();
-      });
-      subscription = data.subscription;
+      try {
+        const { data } = supabase.auth.onAuthStateChange((event) => {
+          (async () => {
+            try {
+              if (event === 'SIGNED_IN') {
+                setIsAuthenticated(true);
+                await fetchUserEmail();
+              } else if (event === 'SIGNED_OUT') {
+                setIsAuthenticated(false);
+                setUserEmail('');
+              }
+            } catch (error) {
+              console.error('Auth state change error:', error);
+            }
+          })();
+        });
+        subscription = data.subscription;
+      } catch (error) {
+        console.error('Auth listener setup error:', error);
+      }
     }
 
     return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
+      try {
+        if (subscription && typeof subscription.unsubscribe === 'function') {
+          subscription.unsubscribe();
+        }
+      } catch (error) {
+        console.error('Cleanup error:', error);
       }
     };
   }, []);
 
   const checkAuth = async () => {
-    if (!supabase) {
+    try {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Session error:', error);
+      }
+      setIsAuthenticated(!!session);
+      if (session) {
+        await fetchUserEmail();
+      }
       setLoading(false);
-      return;
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setLoading(false);
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    setIsAuthenticated(!!session);
-    if (session) {
-      fetchUserEmail();
-    }
-    setLoading(false);
   };
 
   const fetchUserEmail = async () => {
