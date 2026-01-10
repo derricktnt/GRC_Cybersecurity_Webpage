@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, LogOut, Activity } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { supabase, SUPABASE_AVAILABLE } from './lib/supabase';
 import { AuthForm } from './components/AuthForm';
 import { ApiKeyManager } from './components/ApiKeyManager';
 import { IpAddressMonitor } from './components/IpAddressMonitor';
@@ -9,26 +9,46 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
+  const [fatalError, setFatalError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!SUPABASE_AVAILABLE) {
+      setFatalError(
+        'Missing Supabase environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Add them to your .env or deployment environment and redeploy.'
+      );
+      setLoading(false);
+      return;
+    }
+
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        setIsAuthenticated(true);
-        fetchUserEmail();
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setUserEmail('');
-      }
-    });
+    let subscription: any | null = null;
+
+    if (supabase) {
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN') {
+          setIsAuthenticated(true);
+          fetchUserEmail();
+        } else if (event === 'SIGNED_OUT') {
+          setIsAuthenticated(false);
+          setUserEmail('');
+        }
+      });
+      subscription = data.subscription;
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const checkAuth = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     setIsAuthenticated(!!session);
     if (session) {
@@ -38,6 +58,7 @@ function App() {
   };
 
   const fetchUserEmail = async () => {
+    if (!supabase) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
       setUserEmail(user.email);
@@ -45,6 +66,7 @@ function App() {
   };
 
   const handleSignOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
   };
 
@@ -52,6 +74,21 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (fatalError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-xl bg-white p-6 rounded shadow text-red-700">
+          <h2 className="text-lg font-bold mb-2">Configuration error</h2>
+          <p className="mb-4">{fatalError}</p>
+          <p className="text-sm text-gray-600">
+            Locally: add a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY and run npm run dev.
+            On Vercel: add the variables under Project → Settings → Environment Variables (ensure they start with VITE_).
+          </p>
+        </div>
       </div>
     );
   }
