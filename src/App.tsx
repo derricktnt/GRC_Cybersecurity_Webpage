@@ -26,13 +26,15 @@ function App() {
 
     if (supabase) {
       const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'SIGNED_IN') {
-          setIsAuthenticated(true);
-          fetchUserEmail();
-        } else if (event === 'SIGNED_OUT') {
-          setIsAuthenticated(false);
-          setUserEmail('');
-        }
+        (async () => {
+          if (event === 'SIGNED_IN') {
+            setIsAuthenticated(true);
+            await fetchUserEmail();
+          } else if (event === 'SIGNED_OUT') {
+            setIsAuthenticated(false);
+            setUserEmail('');
+          }
+        })();
       });
       subscription = data.subscription;
     }
