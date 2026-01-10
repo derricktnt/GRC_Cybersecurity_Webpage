@@ -1,12 +1,17 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const SUPABASE_AVAILABLE = Boolean(supabaseUrl && supabaseAnonKey);
+export const SUPABASE_AVAILABLE = !!(
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl.trim() !== '' &&
+  supabaseAnonKey.trim() !== ''
+);
 
-export const supabase: SupabaseClient | null = SUPABASE_AVAILABLE
-  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+export const supabase: SupabaseClient | null = SUPABASE_AVAILABLE && supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 export interface ApiKey {

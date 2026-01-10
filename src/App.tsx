@@ -18,6 +18,11 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
+        console.log('Supabase availability check:', {
+          available: SUPABASE_AVAILABLE,
+          hasClient: !!supabase
+        });
+
         if (!SUPABASE_AVAILABLE) {
           setFatalError(
             'Missing Supabase environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Add them to your .env or deployment environment and redeploy.'
