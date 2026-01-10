@@ -41,6 +41,11 @@ export function Reports() {
   const fetchReportData = async () => {
     setLoading(true);
 
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     const { data: apiKeys } = await supabase
       .from('api_keys')
       .select('*');
