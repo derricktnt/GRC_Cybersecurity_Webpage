@@ -33,26 +33,42 @@ export function Reports() {
     recentActivity: []
   });
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
-    fetchReportData();
+    checkDemoMode();
   }, []);
 
-  const fetchReportData = async () => {
+  const checkDemoMode = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsDemo(!user);
+    fetchReportData(!user);
+  };
+
+  const fetchReportData = async (demoMode = isDemo) => {
     setLoading(true);
 
-    if (!supabase) {
-      setLoading(false);
-      return;
+    let apiKeys: any[] = [];
+    let ipAddresses: any[] = [];
+
+    if (demoMode) {
+      const storedApiKeys = localStorage.getItem('demo_api_keys');
+      const storedIpAddresses = localStorage.getItem('demo_ip_addresses');
+
+      apiKeys = storedApiKeys ? JSON.parse(storedApiKeys) : [];
+      ipAddresses = storedIpAddresses ? JSON.parse(storedIpAddresses) : [];
+    } else {
+      const { data: apiKeysData } = await supabase
+        .from('api_keys')
+        .select('*');
+
+      const { data: ipAddressesData } = await supabase
+        .from('ip_addresses')
+        .select('*');
+
+      apiKeys = apiKeysData || [];
+      ipAddresses = ipAddressesData || [];
     }
-
-    const { data: apiKeys } = await supabase
-      .from('api_keys')
-      .select('*');
-
-    const { data: ipAddresses } = await supabase
-      .from('ip_addresses')
-      .select('*');
 
     if (apiKeys && ipAddresses) {
       const apiKeysByEnv: Record<string, number> = {};

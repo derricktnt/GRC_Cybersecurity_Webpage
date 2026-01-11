@@ -5,6 +5,7 @@ import { supabase, IpAddress } from '../lib/supabase';
 export function IpAddressMonitor() {
   const [ipAddresses, setIpAddresses] = useState<IpAddress[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const [formData, setFormData] = useState({
     ip_address: '',
     hostname: '',
@@ -15,58 +16,100 @@ export function IpAddressMonitor() {
   });
 
   useEffect(() => {
-    fetchIpAddresses();
+    checkDemoMode();
   }, []);
 
-  const fetchIpAddresses = async () => {
-    const { data, error } = await supabase
-      .from('ip_addresses')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const checkDemoMode = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsDemo(!user);
+    fetchIpAddresses(!user);
+  };
 
-    if (error) {
-      console.error('Error fetching IP addresses:', error);
+  const fetchIpAddresses = async (demoMode = isDemo) => {
+    if (demoMode) {
+      const stored = localStorage.getItem('demo_ip_addresses');
+      if (stored) {
+        setIpAddresses(JSON.parse(stored));
+      }
     } else {
-      setIpAddresses(data || []);
+      const { data, error } = await supabase
+        .from('ip_addresses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching IP addresses:', error);
+      } else {
+        setIpAddresses(data || []);
+      }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase
-      .from('ip_addresses')
-      .insert([{
+    if (isDemo) {
+      const newIp: IpAddress = {
+        id: crypto.randomUUID(),
         ...formData,
-        created_by: (await supabase.auth.getUser()).data.user?.id
-      }]);
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        created_by: null
+      };
 
-    if (error) {
-      console.error('Error adding IP address:', error);
+      const stored = localStorage.getItem('demo_ip_addresses');
+      const existing = stored ? JSON.parse(stored) : [];
+      const updated = [newIp, ...existing];
+      localStorage.setItem('demo_ip_addresses', JSON.stringify(updated));
+      setIpAddresses(updated);
     } else {
-      setFormData({
-        ip_address: '',
-        hostname: '',
-        location: '',
-        risk_level: 'low',
-        category: 'external',
-        notes: ''
-      });
-      setShowForm(false);
-      fetchIpAddresses();
+      const { error } = await supabase
+        .from('ip_addresses')
+        .insert([{
+          ...formData,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        }]);
+
+      if (error) {
+        console.error('Error adding IP address:', error);
+        return;
+      }
+
+      await fetchIpAddresses();
     }
+
+    setFormData({
+      ip_address: '',
+      hostname: '',
+      location: '',
+      risk_level: 'low',
+      category: 'external',
+      notes: ''
+    });
+    setShowForm(false);
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from('ip_addresses')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting IP address:', error);
+    if (isDemo) {
+      const stored = localStorage.getItem('demo_ip_addresses');
+      if (stored) {
+        const existing = JSON.parse(stored);
+        const updated = existing.filter((ip: IpAddress) => ip.id !== id);
+        localStorage.setItem('demo_ip_addresses', JSON.stringify(updated));
+        setIpAddresses(updated);
+      }
     } else {
-      fetchIpAddresses();
+      const { error } = await supabase
+        .from('ip_addresses')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting IP address:', error);
+      } else {
+        fetchIpAddresses();
+      }
     }
   };
 
