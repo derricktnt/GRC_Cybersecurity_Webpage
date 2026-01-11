@@ -14,10 +14,20 @@ function App() {
   const [userEmail, setUserEmail] = useState('');
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       try {
+        const demoUser = localStorage.getItem('demoUser');
+        if (demoUser) {
+          setIsDemoMode(true);
+          setIsAuthenticated(true);
+          setUserEmail(demoUser);
+          setLoading(false);
+          return;
+        }
+
         console.log('Supabase availability check:', {
           available: SUPABASE_AVAILABLE,
           hasClient: !!supabase
@@ -107,8 +117,22 @@ function App() {
   };
 
   const handleSignOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    if (isDemoMode) {
+      setIsDemoMode(false);
+      setIsAuthenticated(false);
+      setUserEmail('');
+      localStorage.removeItem('demoUser');
+    } else {
+      if (!supabase) return;
+      await supabase.auth.signOut();
+    }
+  };
+
+  const handleDemoMode = () => {
+    setIsDemoMode(true);
+    setIsAuthenticated(true);
+    setUserEmail('demo@example.com');
+    localStorage.setItem('demoUser', 'demo@example.com');
   };
 
   if (loading) {
@@ -135,7 +159,7 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    return <AuthForm onAuth={checkAuth} />;
+    return <AuthForm onAuth={checkAuth} onDemoMode={handleDemoMode} />;
   }
 
   return (
@@ -156,6 +180,11 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {isDemoMode && (
+                <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                  Demo Mode
+                </span>
+              )}
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-700">{userEmail}</p>
                 <p className="text-xs text-gray-500">Administrator</p>

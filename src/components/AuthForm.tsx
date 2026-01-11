@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Shield, Lock, Mail } from 'lucide-react';
+import { Shield, Lock, Mail, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface AuthFormProps {
   onAuth: () => void;
+  onDemoMode: () => void;
 }
 
-export function AuthForm({ onAuth }: AuthFormProps) {
+export function AuthForm({ onAuth, onDemoMode }: AuthFormProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -144,6 +145,19 @@ export function AuthForm({ onAuth }: AuthFormProps) {
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
             </button>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <button
+              onClick={onDemoMode}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg hover:shadow-xl"
+            >
+              <Sparkles className="w-5 h-5" />
+              Try Demo Mode
+            </button>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Explore the platform without creating an account
+            </p>
           </div>
         </div>
 
