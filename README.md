@@ -151,7 +151,7 @@ MIT License - feel free to use this project as a reference or template.
 
 **Portfolio Project by [Derrick D]**
 
-- GitHub: [@yourusername](https://github.com/derricktnt)
+- GitHub: (https://github.com/derricktnt)
 - LinkedIn: www.linkedin.com/in/
 derrick-d-9a4ab743
 Vanity URL name
