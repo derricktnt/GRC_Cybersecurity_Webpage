@@ -149,11 +149,14 @@ MIT License - feel free to use this project as a reference or template.
 
 ## Contact
 
-**Portfolio Project by [Your Name]**
+**Portfolio Project by [Derrick D]**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
+- GitHub: [@yourusername](https://github.com/derricktnt)
+- LinkedIn: www.linkedin.com/in/
+derrick-d-9a4ab743
+Vanity URL name
+
+- Email: derricktnt0817@gmail.com
 
 ---
 
