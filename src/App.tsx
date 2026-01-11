@@ -33,18 +33,13 @@ function App() {
           hasClient: !!supabase
         });
 
-        if (!SUPABASE_AVAILABLE) {
-          setFatalError(
-            'Missing Supabase environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Add them to your .env or deployment environment and redeploy.'
-          );
+        if (SUPABASE_AVAILABLE) {
+          await checkAuth();
+        } else {
           setLoading(false);
-          return;
         }
-
-        await checkAuth();
       } catch (error) {
         console.error('Initialization error:', error);
-        setFatalError(`Initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setLoading(false);
       }
     };
