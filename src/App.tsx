@@ -228,11 +228,11 @@ function App() {
               </div>
             </div>
 
-            <ApiKeyManager />
-            <IpAddressMonitor />
+            <ApiKeyManager isDemoMode={isDemoMode} />
+            <IpAddressMonitor isDemoMode={isDemoMode} />
           </div>
         ) : (
-          <Reports />
+          <Reports isDemoMode={isDemoMode} />
         )}
       </main>
     </div>
