@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, AlertTriangle, Shield, Radio } from 'lucide-react';
+import { Globe, Plus, Trash2, AlertTriangle, Shield, Radio, Network } from 'lucide-react';
 import { supabase, IpAddress } from '../lib/supabase';
 
 export function IpAddressMonitor() {
   const [ipAddresses, setIpAddresses] = useState<IpAddress[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showBulkScan, setShowBulkScan] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  const [bulkIpInput, setBulkIpInput] = useState(['', '', '', '', '']);
+  const [ipRangeStart, setIpRangeStart] = useState('');
+  const [ipRangeEnd, setIpRangeEnd] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
   const [formData, setFormData] = useState({
     ip_address: '',
     hostname: '',
@@ -162,6 +167,95 @@ export function IpAddressMonitor() {
     return stats;
   };
 
+  const parseIpRange = (start: string, end: string): string[] => {
+    const startParts = start.split('.').map(Number);
+    const endParts = end.split('.').map(Number);
+    const ips: string[] = [];
+
+    if (startParts.length !== 4 || endParts.length !== 4) return [];
+    if (startParts.some(isNaN) || endParts.some(isNaN)) return [];
+
+    const startNum = startParts[0] * 16777216 + startParts[1] * 65536 + startParts[2] * 256 + startParts[3];
+    const endNum = endParts[0] * 16777216 + endParts[1] * 65536 + endParts[2] * 256 + endParts[3];
+
+    if (startNum > endNum || (endNum - startNum) > 100) return [];
+
+    for (let i = startNum; i <= endNum; i++) {
+      const a = Math.floor(i / 16777216);
+      const b = Math.floor((i % 16777216) / 65536);
+      const c = Math.floor((i % 65536) / 256);
+      const d = i % 256;
+      ips.push(`${a}.${b}.${c}.${d}`);
+    }
+
+    return ips;
+  };
+
+  const handleBulkScan = async () => {
+    setIsScanning(true);
+    const ipsToScan: string[] = [];
+
+    if (ipRangeStart && ipRangeEnd) {
+      const rangeIps = parseIpRange(ipRangeStart, ipRangeEnd);
+      ipsToScan.push(...rangeIps);
+    } else {
+      bulkIpInput.forEach(ip => {
+        if (ip.trim()) ipsToScan.push(ip.trim());
+      });
+    }
+
+    if (ipsToScan.length === 0) {
+      setIsScanning(false);
+      return;
+    }
+
+    const newIpAddresses = ipsToScan.map(ip => ({
+      ip_address: ip,
+      hostname: '',
+      location: '',
+      risk_level: 'low',
+      category: 'external' as const,
+      notes: 'Auto-scanned IP address'
+    }));
+
+    if (isDemo) {
+      const newIps: IpAddress[] = newIpAddresses.map(ipData => ({
+        id: crypto.randomUUID(),
+        ...ipData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        created_by: null
+      }));
+
+      const stored = localStorage.getItem('demo_ip_addresses');
+      const existing = stored ? JSON.parse(stored) : [];
+      const updated = [...newIps, ...existing];
+      localStorage.setItem('demo_ip_addresses', JSON.stringify(updated));
+      setIpAddresses(updated);
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      const ipsWithUser = newIpAddresses.map(ip => ({
+        ...ip,
+        created_by: user?.id
+      }));
+
+      const { error } = await supabase
+        .from('ip_addresses')
+        .insert(ipsWithUser);
+
+      if (!error) {
+        await fetchIpAddresses();
+      }
+    }
+
+    setBulkIpInput(['', '', '', '', '']);
+    setIpRangeStart('');
+    setIpRangeEnd('');
+    setIsScanning(false);
+    setShowBulkScan(false);
+  };
+
   const stats = getRiskStats();
 
   return (
@@ -177,13 +271,22 @@ export function IpAddressMonitor() {
               <p className="text-sm text-gray-500">Track and assess network security threats</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add IP Address
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowBulkScan(!showBulkScan)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Network className="w-4 h-4" />
+              Bulk Scan
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add IP Address
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4">
@@ -217,6 +320,94 @@ export function IpAddressMonitor() {
           </div>
         </div>
       </div>
+
+      {showBulkScan && (
+        <div className="p-6 bg-blue-50 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Network className="w-5 h-5 text-blue-600" />
+            Bulk IP Scan
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter up to 5 IP Addresses
+              </label>
+              <div className="space-y-2">
+                {bulkIpInput.map((ip, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    value={ip}
+                    onChange={(e) => {
+                      const newBulkIps = [...bulkIpInput];
+                      newBulkIps[index] = e.target.value;
+                      setBulkIpInput(newBulkIps);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                    placeholder={`IP Address ${index + 1} (e.g., 192.168.1.${index + 1})`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-gray-300"></div>
+              <span className="text-sm font-medium text-gray-500">OR</span>
+              <div className="flex-1 h-px bg-gray-300"></div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter IP Range (max 100 addresses)
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <input
+                    type="text"
+                    value={ipRangeStart}
+                    onChange={(e) => setIpRangeStart(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                    placeholder="Start IP (e.g., 192.168.1.1)"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={ipRangeEnd}
+                    onChange={(e) => setIpRangeEnd(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                    placeholder="End IP (e.g., 192.168.1.50)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleBulkScan}
+                disabled={isScanning}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+              >
+                <Network className="w-4 h-4" />
+                {isScanning ? 'Scanning...' : 'Start Scan'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkScan(false);
+                  setBulkIpInput(['', '', '', '', '']);
+                  setIpRangeStart('');
+                  setIpRangeEnd('');
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="p-6 bg-gray-50 border-b border-gray-200">
