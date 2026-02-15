@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, Plus, Trash2, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Key, Trash2, Eye, EyeOff, RefreshCw, Scan } from 'lucide-react';
 import { supabase, ApiKey } from '../lib/supabase';
 
 export function ApiKeyManager() {
@@ -115,14 +115,18 @@ export function ApiKeyManager() {
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <Plus className="w-4 h-4" />
-            Add API Key
+            <Scan className="w-4 h-4" />
+            API Scan
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div className="p-6 bg-gray-50 border-b border-gray-200">
+        <div className="p-6 bg-blue-50 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Scan className="w-5 h-5 text-blue-600" />
+            API Key Scan
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
