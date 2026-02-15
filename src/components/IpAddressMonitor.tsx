@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, AlertTriangle, Shield, Radio, Network } from 'lucide-react';
+import { Globe, Trash2, AlertTriangle, Shield, Radio, Network } from 'lucide-react';
 import { supabase, IpAddress } from '../lib/supabase';
 
 export function IpAddressMonitor() {
@@ -277,14 +277,7 @@ export function IpAddressMonitor() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Network className="w-4 h-4" />
-              Bulk Scan
-            </button>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add IP Address
+              IP Scan
             </button>
           </div>
         </div>
@@ -325,7 +318,7 @@ export function IpAddressMonitor() {
         <div className="p-6 bg-blue-50 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Network className="w-5 h-5 text-blue-600" />
-            Bulk IP Scan
+            IP Scan
           </h3>
           <div className="space-y-4">
             <div>
