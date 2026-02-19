@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, Calendar, Shield, Key, Globe, FileText } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertCircle, Calendar, Shield, Key, Globe, FileText, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface ReportData {
@@ -113,6 +113,109 @@ export function Reports() {
     setLoading(false);
   };
 
+  const exportAsXML = () => {
+    const timestamp = new Date().toISOString();
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<SecurityReport generated="${timestamp}">
+  <Summary>
+    <SecurityScore>${securityScore}</SecurityScore>
+    <TotalApiKeys>${reportData.totalApiKeys}</TotalApiKeys>
+    <ActiveApiKeys>${reportData.activeApiKeys}</ActiveApiKeys>
+    <ExpiredApiKeys>${reportData.expiredApiKeys}</ExpiredApiKeys>
+    <TotalIpAddresses>${reportData.totalIpAddresses}</TotalIpAddresses>
+    <HighRiskIps>${reportData.highRiskIps}</HighRiskIps>
+    <CriticalRiskIps>${reportData.criticalRiskIps}</CriticalRiskIps>
+  </Summary>
+  <ApiKeysByEnvironment>
+${Object.entries(reportData.apiKeysByEnvironment).map(([env, count]) => `    <Environment name="${env}" count="${count}"/>`).join('\n')}
+  </ApiKeysByEnvironment>
+  <IpsByRiskLevel>
+${Object.entries(reportData.ipsByRiskLevel).map(([risk, count]) => `    <RiskLevel level="${risk}" count="${count}"/>`).join('\n')}
+  </IpsByRiskLevel>
+  <IpsByCategory>
+${Object.entries(reportData.ipsByCategory).map(([category, count]) => `    <Category name="${category}" count="${count}"/>`).join('\n')}
+  </IpsByCategory>
+  <RecentActivity>
+${reportData.recentActivity.map(activity => `    <Activity type="${activity.type}" timestamp="${activity.timestamp}">
+      <Description>${activity.description}</Description>
+    </Activity>`).join('\n')}
+  </RecentActivity>
+</SecurityReport>`;
+
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security-report-${new Date().toISOString().split('T')[0]}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsPDF = () => {
+    const content = `
+SECURITY REPORT
+Generated: ${new Date().toLocaleString()}
+${'='.repeat(80)}
+
+EXECUTIVE SUMMARY
+${'-'.repeat(80)}
+Security Score: ${securityScore}/100 (${securityScore >= 90 ? 'Excellent' : securityScore >= 70 ? 'Good' : securityScore >= 50 ? 'Fair' : 'Needs Attention'})
+Total API Keys: ${reportData.totalApiKeys}
+  - Active: ${reportData.activeApiKeys}
+  - Expired: ${reportData.expiredApiKeys}
+Total IP Addresses: ${reportData.totalIpAddresses}
+Active Threats: ${totalThreats}
+  - Critical Risk: ${reportData.criticalRiskIps}
+  - High Risk: ${reportData.highRiskIps}
+
+API KEYS BY ENVIRONMENT
+${'-'.repeat(80)}
+${Object.entries(reportData.apiKeysByEnvironment).map(([env, count]) => {
+  const percentage = reportData.totalApiKeys > 0 ? ((count / reportData.totalApiKeys) * 100).toFixed(1) : '0';
+  return `${env.charAt(0).toUpperCase() + env.slice(1)}: ${count} (${percentage}%)`;
+}).join('\n') || 'No data available'}
+
+IP ADDRESSES BY RISK LEVEL
+${'-'.repeat(80)}
+${Object.entries(reportData.ipsByRiskLevel).map(([risk, count]) => {
+  const percentage = reportData.totalIpAddresses > 0 ? ((count / reportData.totalIpAddresses) * 100).toFixed(1) : '0';
+  return `${risk.charAt(0).toUpperCase() + risk.slice(1)} Risk: ${count} (${percentage}%)`;
+}).join('\n') || 'No data available'}
+
+IP ADDRESSES BY CATEGORY
+${'-'.repeat(80)}
+${Object.entries(reportData.ipsByCategory).map(([category, count]) => {
+  const percentage = reportData.totalIpAddresses > 0 ? ((count / reportData.totalIpAddresses) * 100).toFixed(1) : '0';
+  return `${category.charAt(0).toUpperCase() + category.slice(1)}: ${count} (${percentage}%)`;
+}).join('\n') || 'No data available'}
+
+RECENT ACTIVITY
+${'-'.repeat(80)}
+${reportData.recentActivity.map(activity =>
+  `[${new Date(activity.timestamp).toLocaleString()}] ${activity.description}`
+).join('\n') || 'No recent activity'}
+
+SECURITY RECOMMENDATIONS
+${'-'.repeat(80)}
+${reportData.expiredApiKeys > 0 ? `⚠ CRITICAL: ${reportData.expiredApiKeys} expired API key(s) detected. Rotate or remove immediately.\n` : ''}${reportData.criticalRiskIps > 0 ? `⚠ CRITICAL: ${reportData.criticalRiskIps} IP address(es) marked as critical risk. Review and block if necessary.\n` : ''}${reportData.highRiskIps > 0 ? `⚠ WARNING: ${reportData.highRiskIps} IP address(es) marked as high risk. Monitor closely.\n` : ''}${reportData.expiredApiKeys === 0 && totalThreats === 0 ? '✓ All systems secure. No critical security issues detected.\n  Continue monitoring your systems regularly.' : ''}
+
+${'='.repeat(80)}
+End of Report
+`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security-report-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -126,13 +229,31 @@ export function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-blue-50 rounded-lg">
-          <BarChart3 className="w-7 h-7 text-blue-600" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <BarChart3 className="w-7 h-7 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Security Reports & Analytics</h2>
+            <p className="text-sm text-gray-500">Comprehensive overview of your security posture</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Security Reports & Analytics</h2>
-          <p className="text-sm text-gray-500">Comprehensive overview of your security posture</p>
+        <div className="flex gap-2">
+          <button
+            onClick={exportAsPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export as TXT
+          </button>
+          <button
+            onClick={exportAsXML}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export as XML
+          </button>
         </div>
       </div>
 
