@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Shield, LogOut, Activity, BarChart3, LayoutDashboard } from 'lucide-react';
+import { Shield, LogOut, Activity, BarChart3, LayoutDashboard, Server } from 'lucide-react';
 import { supabase, SUPABASE_AVAILABLE } from './lib/supabase';
 import { AuthForm } from './components/AuthForm';
 import { ApiKeyManager } from './components/ApiKeyManager';
 import { IpAddressMonitor } from './components/IpAddressMonitor';
 import { Reports } from './components/Reports';
+import { SshCredentials } from './components/SshCredentials';
 
-type View = 'dashboard' | 'reports';
+type View = 'dashboard' | 'reports' | 'ssh';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -206,6 +207,17 @@ function App() {
               Dashboard
             </button>
             <button
+              onClick={() => setCurrentView('ssh')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                currentView === 'ssh'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Server className="w-4 h-4" />
+              SSH Credentials
+            </button>
+            <button
               onClick={() => setCurrentView('reports')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 currentView === 'reports'
@@ -255,6 +267,8 @@ function App() {
             <ApiKeyManager isDemoMode={isDemoMode} />
             <IpAddressMonitor isDemoMode={isDemoMode} />
           </div>
+        ) : currentView === 'ssh' ? (
+          <SshCredentials />
         ) : (
           <Reports isDemoMode={isDemoMode} />
         )}
